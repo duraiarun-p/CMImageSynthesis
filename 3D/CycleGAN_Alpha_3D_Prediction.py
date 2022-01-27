@@ -1340,7 +1340,7 @@ def synth3D_trans_j(cGAN,overlap,CT,CT_P):
     return CT_P,CT_blks,CT_blks_pred
 #%%
 overlap=1
-border=2
+border=10 # 10 is better
 CT_P=np.zeros_like(CT,dtype=float)
 # CT_P,CT_blks,CT_blks_pred=synth3D_wo_pad_avg(cGAN,overlap,CT)
 # CT_P,CT_blks,CT_blks_pred=synth3D_wo_pad(cGAN,overlap,CT)
@@ -1380,6 +1380,7 @@ plt.title('pseudo CB')
 #%%
 CTsiz1=CT.shape
 slice_index=np.random.choice(CTsiz1[2])
+# slice_index=
 plt.figure(2)
 plt.subplot(1,2,1)
 plt.imshow(CT[:,:,slice_index],cmap='gray')
