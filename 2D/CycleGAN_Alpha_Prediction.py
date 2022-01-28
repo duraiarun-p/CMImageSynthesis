@@ -537,6 +537,7 @@ class CycleGAN():
 # mypath='/home/arun/Documents/PyWSPrecision/datasets/printoutslices'
 datapath='/home/arun/Documents/MATLAB/ImageDB/PrintoutDB/DB33/'
 mypath='/home/arun/Documents/PyWSPrecision/datasets/printout2d_data'
+# data same as printout2d folder-slices were not normalised but normalised during pre-processing training and prediction
 weightoutputpath1='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Alpha_Output'
 weightoutputpath=os.path.join(weightoutputpath1, 'predicted_volume')
 if not os.path.isdir(weightoutputpath):
