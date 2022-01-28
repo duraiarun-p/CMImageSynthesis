@@ -39,7 +39,8 @@ os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 st_0 = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') 
 start_time_0=time.time()
-
+print('Script started at')
+print(st_0)
 #%% Data loader using data generator
 
 def create_image_array_gen(image_list, image_path, nr_of_channels,newshape):
@@ -455,9 +456,14 @@ class CycleGAN():
 
 # mypath='/home/arun/Documents/PyWSPrecision/datasets/printoutslices'
 mypath='/home/arun/Documents/PyWSPrecision/datasets/printout2d_data'
-weightoutputpath=os.path.join(os.getcwd(),'Alpha_Output')
-# weightoutputpath='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/2d/'
-os.mkdir(weightoutputpath)
+
+weightoutputpath1='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/'
+weightoutputpath=os.path.join(weightoutputpath1,'Alpha_Output')
+if not os.path.isdir(weightoutputpath):
+    os.mkdir(weightoutputpath)
+
+        
+
 # imgshape=(512,512)
 
 # inputfile = ''

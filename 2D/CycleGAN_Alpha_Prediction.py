@@ -11,8 +11,8 @@ import datetime
 # import itk
 import h5py
 import numpy as np
-# from os import listdir
-# from os.path import isfile, join
+from os import listdir
+from os.path import isfile, join
 # import matplotlib.pyplot as plt
 import random
 import os
@@ -39,6 +39,82 @@ os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 st_0 = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') 
 start_time_0=time.time()
+#%% Data loader for volume prediction
+def dataload(DataPath):
+    # mypath=self.DataPath
+    onlyfiles = [f for f in listdir(DataPath) if isfile(join(DataPath, f))]
+    onlyfiles.sort()
+    onlyfileslenrem=len(onlyfiles)-round(len(onlyfiles)*0.7)
+    onlyfiles = onlyfiles[0:-onlyfileslenrem]
+    matfiles=[join(DataPath,f) for f in onlyfiles]
+    mat_fname_ind=np.random.choice(len(matfiles),replace=False)  
+    mat_contents=h5py.File(matfiles[mat_fname_ind],'r')
+    # mat_contents_list=list(mat_contents.keys())    
+    PlanCTCellRef=mat_contents['CTInfoCell']
+    CTLen=np.shape(PlanCTCellRef)
+    CTsl=np.zeros([CTLen[1],1])
+    for cti in range(CTLen[1]):
+        CTmatsizref=mat_contents['CTInfoCell'][1,cti]
+        CTLocR=mat_contents[CTmatsizref]
+        CTLoc=CTLocR[()]
+        CTsiz=np.shape(CTLoc)
+        if CTsiz[1]>300:
+            CTsl[cti]=1
+        else:
+            CTsl[cti]=0
+    CTindex=np.where(CTsl==1)
+    CTindex=CTindex[0]   
+    CTindex=int(CTindex)
+    PlanCTLocRef=mat_contents['CTInfoCell'][1, CTindex]
+    PlanCTLocRef=mat_contents[PlanCTLocRef]
+    # PlanCTLoc=PlanCTLocRef[()]
+    PlanCTCellRef=mat_contents['CTInfoCell'][2, CTindex]
+    PlanCTCellRef=mat_contents[PlanCTCellRef]
+    CT=PlanCTCellRef[()]
+    CT=np.transpose(CT,(2,1,0))
+    CTsiz1=CT.shape
+    # CT_rand_index=np.random.choice(CTsiz1[2],size=batch_size,replace=False)
+    # batch_CT_img=np.zeros((CTsiz1[0],CTsiz1[1],len(CT_rand_index)))
+    # for ri in range(len(CT_rand_index)):
+    #     batch_CT_img[:,:,ri]=CT[:,:,CT_rand_index[ri]]    
+    CBCTCellRef=mat_contents['CBCTInfocell']
+    CBCLen=np.shape(CBCTCellRef)
+    # CBCTi=np.random.choice(CBCLen[1],size=1)
+    # CBCellRef1=mat_contents['CBCTInfocell'][4, CBCTi]
+    # # CBCellRef2=mat_contents[CBCellRef1]
+    # CBCT=CBCellRef1[()]
+    # CBCT=np.transpose(CBCT,(2,1,0))
+
+        
+    CBCTs=[]
+    for CBCTi in range(CBCLen[1]):
+        # print(CBCTi)
+        CBCellRef=mat_contents['CBCTInfocell'][4, CBCTi]
+        CBCellRef=mat_contents[CBCellRef]
+        CBCT=CBCellRef[()]
+        CBCT=np.transpose(CBCT,(2,1,0))
+        CBCTs.append(CBCT)
+        CBLocRef=mat_contents['CBCTInfocell'][1, CBCTi]
+        CBLocRef=mat_contents[CBLocRef]
+        CBCTLoc=CBLocRef[()]
+    # CBsiz=CBCT.shape
+    # batch_CB_img=np.zeros((CTsiz1[0],CTsiz1[1],batch_size))
+    # for cbi in range(batch_size):
+    #     CB_rand_sl_index=np.random.choice(CBsiz[2])
+    #     CB_rand_pat_index=np.random.choice(CBCLen[1],replace=False)
+    #     # print(CB_rand_pat_index)
+    #     # print(CB_rand_sl_index)
+    #     batch_CB_img[:,:,cbi]=CBCTs[CB_rand_pat_index][:,:,CB_rand_sl_index]
+    # del mat_contents
+    # batch_CT_img=tf.image.resize(batch_CT_img,[256,256])
+    # batch_CB_img=tf.image.resize(batch_CB_img,[256,256])
+    # batch_CT_img = tf.transpose(batch_CT_img,perm=[2,0,1])
+    # batch_CB_img = tf.transpose(batch_CB_img,perm=[2,0,1])
+    # batch_CT_img = tf.expand_dims(batch_CT_img, -1)
+    # batch_CB_img = tf.expand_dims(batch_CB_img, -1)
+    
+    # return batch_CT_img, batch_CB_img
+    return CT,CBCTs
 
 #%% Data loader using data generator
 
@@ -225,6 +301,7 @@ class CycleGAN():
           # optimizer = keras.optimizers.Adam(0.0002, 0.5,0.999)
 
           self.DiscCT=self.build_discriminator()
+          self.DiscCT.trainable=False
           self.DiscCT.compile(loss='mse', optimizer=self.Disc_optimizer, metrics=['accuracy'])
           self.DiscCT._name='Discriminator-CT'
           # self.DiscCT.summary()
@@ -232,6 +309,7 @@ class CycleGAN():
               self.DiscCT.summary(print_fn=lambda x: f.write(x + '\n'))
          
           self.DiscCB=self.build_discriminator()
+          self.DiscCB.trainable=False
           self.DiscCB.compile(loss='mse', optimizer=self.Disc_optimizer, metrics=['accuracy'])
           self.DiscCB._name='Discriminator-CB'
           
@@ -246,6 +324,7 @@ class CycleGAN():
           self.labelshape=labelshape
         
           self.GenCB2CT=self.build_generator()
+          self.GenCB2CT.trainable=False
           self.GenCB2CT.compile(loss='mse', optimizer=self.Gen_optimizer, metrics=['accuracy'])
           self.GenCB2CT._name='Generator-CB2CT'
           # self.GenCB2CT.summary()
@@ -253,6 +332,7 @@ class CycleGAN():
               self.GenCB2CT.summary(print_fn=lambda x: f.write(x + '\n'))
          
           self.GenCT2CB=self.build_generator()
+          self.GenCT2CB.trainable=False
           self.GenCT2CB.compile(loss='mse', optimizer=self.Gen_optimizer, metrics=['accuracy'])
           self.GenCT2CB._name='Generator-CT2CB'
          
@@ -286,6 +366,7 @@ class CycleGAN():
         
         # Combined model trains generators to fool discriminators
           self.cycleGAN_Model = keras.Model(inputs=[img_CT, img_CB], outputs=[valid_CT, valid_CB, reconstr_CT, reconstr_CB, img_CT_id, img_CB_id])
+          self.cycleGAN_Model.trainable=False
           self.cycleGAN_Model.compile(loss=['mse', 'mse', 'mae', 'mae', 'mae', 'mae'],
           loss_weights=[1, 1, self.lambda_cycle, self.lambda_cycle, self.lambda_id, self.lambda_id], optimizer=self.Gen_optimizer)
           self.cycleGAN_Model._name='CycleGAN'
@@ -454,8 +535,12 @@ class CycleGAN():
 #%%
 
 # mypath='/home/arun/Documents/PyWSPrecision/datasets/printoutslices'
+datapath='/home/arun/Documents/MATLAB/ImageDB/PrintoutDB/DB33/'
 mypath='/home/arun/Documents/PyWSPrecision/datasets/printout2d_data'
-weightoutputpath='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/2d/predict/'
+weightoutputpath1='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Alpha_Output'
+weightoutputpath=os.path.join(weightoutputpath1, 'predicted_volume')
+if not os.path.isdir(weightoutputpath):
+    os.mkdir(weightoutputpath)
 # imgshape=(512,512)
 
 # inputfile = ''
@@ -480,27 +565,68 @@ weightoutputpath='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/2
 # batch_size=1
 # epochs=1
 cGAN=CycleGAN(mypath,weightoutputpath,epochs=40,save_epoch_frequency=2,batch_size=3,imgshape=(256,256,1),newshape=(256,256),batch_set_size=10,saveweightflag=True)
-test_ds=loadprintoutgen(cGAN.trainCT_path,cGAN.trainCB_path,batch_size=2,newshape=(256,256),batch_set_size=10)
+CT,CBCTs=dataload(datapath)
+CBCT=CBCTs[1]
+
+# Slice-wise data normalisation from N-net training script
+CTsiz=CT.shape
+CBsiz=CBCT.shape
+for zi in range(CTsiz[2]):
+    image=CT[:,:,zi]
+    image = (image-np.min(image))/(np.max(image)-np.min(image))
+    CT[:,:,zi]=image
+
+for zi in range(CBsiz[2]):
+    image1=CBCT[:,:,zi]
+    image1 = (image1-np.min(image1))/(np.max(image1)-np.min(image1))
+    CBCT[:,:,zi]=image
+# Data pre-processing i.e array to tensor conversion with dimensional expansion for Tensorflow
+batch_CT=tf.image.resize(CT,[256,256])
+batch_CB=tf.image.resize(CBCT,[256,256])
+batch_CT = tf.transpose(batch_CT,perm=[2,0,1])
+batch_CB = tf.transpose(batch_CB,perm=[2,0,1])
+batch_CT = tf.expand_dims(batch_CT, -1)
+batch_CB = tf.expand_dims(batch_CB, -1)
+
 #%%
-for images in test_ds:
-    batch_CT = images[0]
-    batch_CB = images[1]
-#%%
+# test_ds=loadprintoutgen(cGAN.trainCT_path,cGAN.trainCB_path,batch_size=2,newshape=(256,256),batch_set_size=10)
+# #%%
+# for images in test_ds:
+#     batch_CT = images[0]
+#     batch_CB = images[1]
+# #%%
+saved_weigth_path='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Alpha_Output/run0/weights/'
+TestGenCT2CB_path=os.path.join(saved_weigth_path,'GenCT2CBWeights-100.h5')
 TestGenCT2CB=cGAN.build_generator()
-TestGenCT2CB.load_weights("/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/2d/run2/weights/GenCT2CBWeights-0.h5")
+TestGenCT2CB.trainable=False
+TestGenCT2CB.load_weights(TestGenCT2CB_path)
 batch_CB_P=TestGenCT2CB.predict(batch_CT)
 
+TestGenCB2CT_path=os.path.join(saved_weigth_path,'GenCB2CTWeights-100.h5')
 TestGenCB2CT=cGAN.build_generator()
-TestGenCB2CT.load_weights("/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/2d/run2/weights/GenCB2CTWeights-0.h5")
+TestGenCB2CT.trainable=False
+TestGenCB2CT.load_weights(TestGenCB2CT_path)
 batch_CT_P=TestGenCB2CT.predict(batch_CB)
 #%%
+
+batch_CT=tf.image.resize(batch_CT,[512,512])
+batch_CB=tf.image.resize(batch_CB,[512,512])
+batch_CT_P=tf.image.resize(batch_CT_P,[512,512])
+batch_CB_P=tf.image.resize(batch_CB_P,[512,512])
+
 batch_CB_P=np.squeeze(batch_CB_P,axis=-1)
 batch_CT=np.squeeze(batch_CT,axis=-1)
 batch_CT_P=np.squeeze(batch_CT_P,axis=-1)
 batch_CB=np.squeeze(batch_CB,axis=-1)
+
+
+
+#%%
+from scipy.io import savemat
+mdic = {"batch_CB_P":batch_CB_P,"batch_CB":batch_CB,"batch_CT_P":batch_CB_P,"batch_CT":batch_CB}
+savemat("Pred_volumes.mat",mdic)
 #%%
 from matplotlib import pyplot as plt
-#%%
 plt.figure(1)
 plt.subplot(1,2,1)
 plt.imshow(batch_CT[0,:,:],cmap='gray')
