@@ -312,7 +312,7 @@ class CycleGAN():
           
           self.cycleGAN_Model = keras.Model(inputs=[img_CT, img_CB], outputs=[valid_CT, valid_CB, reconstr_CT, reconstr_CB, img_CT_id, img_CB_id,reconstr_CT, reconstr_CB])
           self.cycleGAN_Model.compile(loss=['mse', 'mse', 'mae', 'mae','mae', 'mae', custom_loss_2_beta,custom_loss_2_beta],
-                                     loss_weights=[1, 1, self.lambda_cycle, self.lambda_cycle, self.lambda_id, self.lambda_id,1,1], 
+                                     loss_weights=[1, 1, self.lambda_cycle, self.lambda_cycle, self.lambda_id, self.lambda_id,10,10], 
                                      optimizer=self.Gen_optimizer)
           self.cycleGAN_Model._name='CycleGAN'
          

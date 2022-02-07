@@ -623,14 +623,14 @@ batch_CB = tf.expand_dims(batch_CB, -1)
 #     batch_CB = images[1]
 # #%%
 #Edit after training
-saved_weigth_path='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Beta_Output/run20/weights/'
-TestGenCT2CB_path=os.path.join(saved_weigth_path,'GenCT2CBWeights-0.h5')#Edit after training
+saved_weigth_path='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Beta_Output/run3/weights/'
+TestGenCT2CB_path=os.path.join(saved_weigth_path,'GenCT2CBWeights-500.h5')#Edit after training
 TestGenCT2CB=cGAN.build_generator()
 TestGenCT2CB.trainable=False
 TestGenCT2CB.load_weights(TestGenCT2CB_path)
 batch_CB_P=TestGenCT2CB.predict(batch_CT)
 
-TestGenCB2CT_path=os.path.join(saved_weigth_path,'GenCB2CTWeights-0.h5')#Edit after training
+TestGenCB2CT_path=os.path.join(saved_weigth_path,'GenCB2CTWeights-500.h5')#Edit after training
 TestGenCB2CT=cGAN.build_generator()
 TestGenCB2CT.trainable=False
 TestGenCB2CT.load_weights(TestGenCB2CT_path)

@@ -238,8 +238,8 @@ class CycleGAN():
           os.mkdir(self.WeightSavePathNew)
           os.chdir(self.WeightSavePathNew)
           
-          self.Disc_lr=0.001
-          self.Gen_lr=0.001
+          self.Disc_lr=0.0005
+          self.Gen_lr=0.0002
           
           # self.Disc_lr=0.03
           # self.Gen_lr=0.03
@@ -311,7 +311,7 @@ class CycleGAN():
         # Combined model trains generators to fool discriminators
           self.cycleGAN_Model = keras.Model(inputs=[img_CT, img_CB], outputs=[valid_CT, valid_CB, reconstr_CT, reconstr_CB, img_CT_id, img_CB_id,reconstr_CT, reconstr_CB])
           self.cycleGAN_Model.compile(loss=['mse', 'mse', 'mae', 'mae','mae', 'mae', custom_loss_2_beta,custom_loss_2_beta],
-                                     loss_weights=[1, 1, self.lambda_cycle, self.lambda_cycle, self.lambda_id, self.lambda_id,1,1], 
+                                     loss_weights=[1, 1, self.lambda_cycle, self.lambda_cycle, self.lambda_id, self.lambda_id,10,10], 
                                      optimizer=self.Gen_optimizer)
           self.cycleGAN_Model._name='CycleGAN'
          
@@ -513,7 +513,7 @@ if not os.path.isdir(weightoutputpath):
 
 # batch_size=1
 # epochs=1
-cGAN=CycleGAN(mypath,weightoutputpath,epochs=200,save_epoch_frequency=25,batch_size=3,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=True)
+cGAN=CycleGAN(mypath,weightoutputpath,epochs=500,save_epoch_frequency=25,batch_size=3,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=True)
 # def run_tf(cGAN):
 #     D_losses,G_losses=cGAN.traincgan()
 #     Loss={D_losses,G_losses}
