@@ -219,9 +219,10 @@ class CycleGAN():
         
         return keras.Model(d0,u1)
     
-    def __init__(self,mypath,weightoutputpath,epochs,save_epoch_frequency,batch_size,imgshape,newshape,batch_set_size,saveweightflag):
+    def __init__(self,mypath,weightoutputpath,lastweightpath,epochs,save_epoch_frequency,batch_size,imgshape,newshape,batch_set_size,saveweightflag,breakflag):
           self.DataPath=mypath
           self.WeightSavePath=weightoutputpath
+          self.lastweightpath=lastweightpath
           self.batch_size=batch_size
           self.newshape=newshape
           self.img_shape=imgshape
@@ -234,6 +235,7 @@ class CycleGAN():
           self.lambda_cycle = 10.0                    # Cycle-consistency loss
           self.lambda_id = 0.9 * self.lambda_cycle    # Identity loss
           self.saveweightflag=saveweightflag
+          self.breakflag=breakflag
           self.patch_size=16
           self.depth_size=32
           self.input_layer_shape_3D=tuple([self.patch_size*2,self.patch_size*2,self.depth_size,1])
@@ -257,8 +259,8 @@ class CycleGAN():
           os.mkdir(self.WeightSavePathNew)
           os.chdir(self.WeightSavePathNew)
           
-          self.Disc_lr=0.0005
-          self.Gen_lr=0.0002
+          self.Disc_lr=0.001
+          self.Gen_lr=0.001
           
           # self.Disc_lr=0.03
           # self.Gen_lr=0.03
@@ -357,6 +359,7 @@ class CycleGAN():
         return learning_rates
           
     def traincgan(self):
+            # epochi=
         os.chdir(self.WeightSavePathNew)
          # self.folderlen='run'+str(len(next(os.walk(self.WeightSavePath))[1]))         
         newdir='weights'        
@@ -374,9 +377,25 @@ class CycleGAN():
         G_losses = []
         # D_losses_T = []
         # G_losses_T = []
-        
+        epoch_start=0
         #Learning rate schedule
         # learning_rates=self.learningrate_log_scheduler()
+        if self.breakflag:
+            lastweightpath=self.lastweightpath
+            lst=os.listdir(lastweightpath)
+            weightfilename=lst[-1]
+            x=weightfilename.split(".")
+            x=x[0].split("-")
+            epochi=int(x[-1])
+            gen1fname1_break="GenCT2CBWeights"+'-'+str(epochi)+'.h5'
+            gen2fname1_break="GenCB2CTWeights"+'-'+str(epochi)+'.h5'
+            disc1fname1_break="DiscCTWeights"+'-'+str(epochi)+'.h5'
+            disc2fname1_break="DiscCBWeights"+'-'+str(epochi)+'.h5'
+            self.GenCT2CB.load_weights(os.path.join(lastweightpath,gen1fname1_break))
+            self.GenCB2CT.load_weights(os.path.join(lastweightpath,gen2fname1_break))
+            self.DiscCT.load_weights(os.path.join(lastweightpath,disc1fname1_break))
+            self.DiscCB.load_weights(os.path.join(lastweightpath,disc2fname1_break))
+            epoch_start=epochi
         
         def run_training_iteration(loop_index, epoch_iterations):
               valid = tf.ones((self.labelshape))
@@ -450,7 +469,22 @@ class CycleGAN():
               
               return g_loss, d_loss.numpy()
               
-        for epochi in range(self.epochs):
+        for epochi in range(epoch_start,self.epochs):
+                # if self.breakflag:
+                #     lastweightpath=self.lastweightpath
+                #     lst=os.listdir(lastweightpath)
+                #     weightfilename=lst[-1]
+                #     x=weightfilename.split(".")
+                #     x=x[0].split("-")
+                #     epochi=int(x[-1])
+                #     gen1fname1_break="GenCT2CBWeights"+'-'+str(epochi)+'.h5'
+                #     gen2fname1_break="GenCB2CTWeights"+'-'+str(epochi)+'.h5'
+                #     disc1fname1_break="DiscCTWeights"+'-'+str(epochi)+'.h5'
+                #     disc2fname1_break="DiscCBWeights"+'-'+str(epochi)+'.h5'
+                #     self.GenCT2CB.load_weights(os.path.join(lastweightpath,gen1fname1_break))
+                #     self.GenCB2CT.load_weights(os.path.join(lastweightpath,gen2fname1_break))
+                #     self.DiscCT.load_weights(os.path.join(lastweightpath,disc1fname1_break))
+                #     self.DiscCB.load_weights(os.path.join(lastweightpath,disc2fname1_break))
             # if self.use_data_generator:
                 loop_index = 1
                 # K.set_value(self.Gen_optimizer.learning_rate, learning_rates[epochi])
@@ -500,12 +534,13 @@ class CycleGAN():
 #%%
 
 # mypath='/home/arun/Documents/PyWSPrecision/datasets/printoutslices'
-mypath='/home/arun/Documents/PyWSPrecision/datasets/printout2d_data'
-
-weightoutputpath1='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/'
+mypath='/home/s1785969/RDS/PyWS/printout2d_data'
+weightoutputpath1='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/'
 weightoutputpath=os.path.join(weightoutputpath1,'Gamma_Output')
 if not os.path.isdir(weightoutputpath):
     os.mkdir(weightoutputpath)
+
+lastweightpath='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Gamma_Output/run0/weights'
 
         
 
@@ -532,7 +567,7 @@ if not os.path.isdir(weightoutputpath):
 
 # batch_size=1
 # epochs=1
-cGAN=CycleGAN(mypath,weightoutputpath,epochs=500,save_epoch_frequency=25,batch_size=3,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=True)
+cGAN=CycleGAN(mypath,weightoutputpath,lastweightpath,epochs=76,save_epoch_frequency=50,batch_size=3,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=True,breakflag=True)
 # def run_tf(cGAN):
 #     D_losses,G_losses=cGAN.traincgan()
 #     Loss={D_losses,G_losses}
