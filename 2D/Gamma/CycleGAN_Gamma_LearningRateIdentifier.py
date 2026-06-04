@@ -33,9 +33,9 @@ from tensorflow.keras.utils import Sequence
 
 import cycleganssimetriclib as ssTF
 
-cfg = tf.compat.v1.ConfigProto() 
-cfg.gpu_options.allow_growth = True
-sess= tf.compat.v1.Session(config=cfg)
+# cfg = tf.compat.v1.ConfigProto() 
+# cfg.gpu_options.allow_growth = True
+# sess= tf.compat.v1.Session(config=cfg)
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
@@ -457,8 +457,8 @@ class CycleGAN():
 #%%
 
 # mypath='/home/arun/Documents/PyWSPrecision/datasets/printoutslices'
-mypath='/home/arun/Documents/PyWSPrecision/datasets/printout2d_data'
-weightoutputpath1='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/'
+mypath='/home/s1785969/RDS/PyWS/printout2d_data'
+weightoutputpath1='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/'
 weightoutputpath=os.path.join(weightoutputpath1,'Gamma_Output')
 if not os.path.isdir(weightoutputpath):
     os.mkdir(weightoutputpath)
@@ -485,7 +485,7 @@ if not os.path.isdir(weightoutputpath):
 
 # batch_size=1
 # epochs=1
-cGAN=CycleGAN(mypath,weightoutputpath,epochs=100,batch_size=2,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=False)
+cGAN=CycleGAN(mypath,weightoutputpath,epochs=1,batch_size=2,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=False)
 # def run_tf(cGAN):
 #     D_losses,G_losses=cGAN.traincgan()
 #     Loss={D_losses,G_losses}

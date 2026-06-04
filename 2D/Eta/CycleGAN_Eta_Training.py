@@ -33,14 +33,16 @@ from tensorflow.keras.utils import Sequence
 
 import cycleganssimetriclib as ssTF
 
-# cfg = tf.compat.v1.ConfigProto() 
-# cfg.gpu_options.allow_growth = True
-# sess= tf.compat.v1.Session(config=cfg)
+cfg = tf.compat.v1.ConfigProto() 
+cfg.gpu_options.allow_growth = True
+sess= tf.compat.v1.Session(config=cfg)
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 st_0 = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') 
 start_time_0=time.time()
+print('Script started at')
+print(st_0)
 #%% Custom loss function
 
 def custom_loss_2_beta(y_true, y_pred):# SSIM
@@ -81,6 +83,61 @@ def custom_loss_3_gamma(y_true, y_pred):# MS-SSIM
     # ssimscore=ssTF.tfmssim_custom(y_true, y_pred, max_val,_MSSSIM_WEIGHTS,filter_size,filter_sigma)
     loss=1-ssimscore
     return loss
+def custom_loss_5_epsilon(y_true, y_pred):# 4-G-SSIM
+    max_val1=tf.math.reduce_max(y_true)-tf.math.reduce_min(y_true)
+    max_val2=tf.math.reduce_max(y_pred)-tf.math.reduce_min(y_pred)
+    max_val =0.5*(max_val1+max_val2)
+    filter_size=11
+    filter_sigma=0.5
+    batchsize=K.int_shape(y_pred)
+    ssimscores=[]
+    for batchelei in range(batchsize[0]):
+        y_pred1=y_pred[batchelei,:,:,:]
+        y_true1=y_true[batchelei,:,:,:]
+        y_pred1=tf.expand_dims(y_pred1, axis=0)
+        y_true1=tf.expand_dims(y_true1, axis=0)
+        ssimscoreele,_=ssTF.tfssim4cg(y_true1, y_pred1, max_val,filter_size,filter_sigma)
+        ssimscores.append(ssimscoreele)
+    # ssimscore,_=ssTF.tfssim4cg(y_true, y_pred, max_val,filter_size,filter_sigma)
+    ssimscore=tf.reduce_mean(ssimscores)
+    loss=1-ssimscore
+    return loss
+def custom_loss_6_zeta(y_true,y_pred):#4-MS-SSIM
+    _MSSSIM_WEIGHTS=(0.0448, 0.2856, 0.3001, 0.2363, 0.1333)
+    filter_size=11
+    filter_sigma=0.5
+    max_val=tf.math.reduce_max(y_true)-tf.math.reduce_min(y_true)
+    batchsize=K.int_shape(y_pred)
+    ssimscores=[]
+    for batchelei in range(batchsize[0]):
+        y_pred1=y_pred[batchelei,:,:,:]
+        y_true1=y_true[batchelei,:,:,:]
+        y_pred1=tf.expand_dims(y_pred1, axis=0)
+        y_true1=tf.expand_dims(y_true1, axis=0)
+        ssimscoreele=ssTF.tfmssim_4c(y_true1,y_pred1,max_val,_MSSSIM_WEIGHTS,filter_size,filter_sigma)
+        ssimscores.append(ssimscoreele)
+    # score=ssTF.tfmssim_4c(y_true,y_pred,max_val,_MSSSIM_WEIGHTS,filter_size,filter_sigma)
+    ssimscore=tf.reduce_mean(ssimscores)
+    loss=1-ssimscore
+    return loss
+def custom_loss_7_eta(y_true,y_pred):#4-G-MS-SSIM
+    _MSSSIM_WEIGHTS=(0.0448, 0.2856, 0.3001, 0.2363, 0.1333)
+    filter_size=11
+    filter_sigma=0.5
+    max_val=tf.math.reduce_max(y_true)-tf.math.reduce_min(y_true)
+    batchsize=K.int_shape(y_pred)
+    ssimscores=[]
+    for batchelei in range(batchsize[0]):
+        y_pred1=y_pred[batchelei,:,:,:]
+        y_true1=y_true[batchelei,:,:,:]
+        y_pred1=tf.expand_dims(y_pred1, axis=0)
+        y_true1=tf.expand_dims(y_true1, axis=0)
+        ssimscoreele=ssTF.tfmssim_4cg(y_true1,y_pred1,max_val,_MSSSIM_WEIGHTS,filter_size,filter_sigma)
+        ssimscores.append(ssimscoreele)
+    # score=ssTF.tfmssim_4cg(y_true,y_pred,max_val,_MSSSIM_WEIGHTS,filter_size,filter_sigma)
+    ssimscore=tf.reduce_mean(ssimscores)
+    loss=1-ssimscore
+    return loss
 #%% Data loader using data generator
 
 def create_image_array_gen(image_list, image_path, nr_of_channels,newshape):
@@ -101,14 +158,11 @@ def create_image_array_gen(image_list, image_path, nr_of_channels,newshape):
     return np.array(image_array)
 
 class data_sequence(Sequence):
-    def __init__(self, trainA_path, trainB_path, image_list_A, image_list_B, newshape,batch_size,batch_set_size):
+    def __init__(self, trainA_path, trainB_path, image_list_A, image_list_B, newshape,batch_size):
         self.newshape=newshape
         self.batch_size = batch_size
-        self.batch_set_size = batch_set_size
         self.train_A = []
         self.train_B = []
-        image_list_A=random.sample(image_list_A,self.batch_set_size)
-        image_list_B=random.sample(image_list_B,self.batch_set_size)
         for image_name in image_list_A:
             if image_name[-1].lower() == 'g':  # to avoid e.g. thumbs.db files
                 self.train_A.append(os.path.join(trainA_path, image_name))
@@ -116,9 +170,9 @@ class data_sequence(Sequence):
             if image_name[-1].lower() == 'g':  # to avoid e.g. thumbs.db files
                 self.train_B.append(os.path.join(trainB_path, image_name))
     def __len__(self):
-        no=1
-        # return int(min(len(self.train_A), len(self.train_B)) / float(self.batch_size))
-        return int(no)
+        # no=1
+        return int(min(len(self.train_A), len(self.train_B)) / float(self.batch_size))
+        # return int(no)
     def __getitem__(self, idx):
         if idx >= min(len(self.train_A), len(self.train_B)):
             # If all images soon are used for one domain,
@@ -145,7 +199,9 @@ class data_sequence(Sequence):
 def loadprintoutgen(trainCT_path,trainCB_path,batch_size,newshape,batch_set_size):
     trainCT_image_names = os.listdir(trainCT_path)
     trainCB_image_names = os.listdir(trainCB_path)
-    return data_sequence(trainCT_path, trainCB_path, trainCT_image_names, trainCB_image_names, newshape,batch_size=batch_size,batch_set_size=batch_set_size)
+    trainCT_image_names=random.sample(trainCT_image_names,batch_set_size)
+    trainCB_image_names=random.sample(trainCB_image_names,batch_set_size)
+    return data_sequence(trainCT_path, trainCB_path, trainCT_image_names, trainCB_image_names, newshape,batch_size=batch_size)
 
 class CycleGAN():
     
@@ -218,9 +274,10 @@ class CycleGAN():
         
         return keras.Model(d0,u1)
     
-    def __init__(self,mypath,weightoutputpath,epochs,batch_size,imgshape,newshape,batch_set_size,saveweightflag):
+    def __init__(self,mypath,weightoutputpath,lastweightpath,epochs,save_epoch_frequency,batch_size,imgshape,newshape,batch_set_size,saveweightflag,breakflag):
           self.DataPath=mypath
           self.WeightSavePath=weightoutputpath
+          self.lastweightpath=lastweightpath
           self.batch_size=batch_size
           self.newshape=newshape
           self.img_shape=imgshape
@@ -228,10 +285,12 @@ class CycleGAN():
           self.genafilter = 32
           self.discfilter = 64
           self.epochs = epochs+1
+          self.save_epoch_frequency=save_epoch_frequency
           self.batch_set_size=batch_set_size
           self.lambda_cycle = 10.0                    # Cycle-consistency loss
           self.lambda_id = 0.9 * self.lambda_cycle    # Identity loss
           self.saveweightflag=saveweightflag
+          self.breakflag=breakflag
           self.patch_size=16
           self.depth_size=32
           self.input_layer_shape_3D=tuple([self.patch_size*2,self.patch_size*2,self.depth_size,1])
@@ -255,8 +314,11 @@ class CycleGAN():
           os.mkdir(self.WeightSavePathNew)
           os.chdir(self.WeightSavePathNew)
           
-          self.Disc_lr=0.0002
-          self.Gen_lr=0.0002
+          self.Disc_lr=0.001
+          self.Gen_lr=0.001
+          
+          # self.Disc_lr=0.03
+          # self.Gen_lr=0.03
          
           self.Disc_optimizer = keras.optimizers.Adam(self.Disc_lr, 0.5,0.999)
           self.Gen_optimizer = keras.optimizers.Adam(self.Gen_lr, 0.5,0.999)
@@ -323,13 +385,8 @@ class CycleGAN():
           valid_CB = self.DiscCB_static(fake_CB)
         
         # Combined model trains generators to fool discriminators
-          # self.cycleGAN_Model = keras.Model(inputs=[img_CT, img_CB], outputs=[valid_CT, valid_CB, reconstr_CT, reconstr_CB, img_CT_id, img_CB_id])
-          # self.cycleGAN_Model.compile(loss=['mse', 'mse', 'mae', 'mae', 'mae', 'mae'],
-          # loss_weights=[1, 1, self.lambda_cycle, self.lambda_cycle, self.lambda_id, self.lambda_id], optimizer=self.Gen_optimizer)
-          # self.cycleGAN_Model._name='CycleGAN'
-          
           self.cycleGAN_Model = keras.Model(inputs=[img_CT, img_CB], outputs=[valid_CT, valid_CB, reconstr_CT, reconstr_CB, img_CT_id, img_CB_id,reconstr_CT, reconstr_CB])
-          self.cycleGAN_Model.compile(loss=['mse', 'mse', 'mae', 'mae','mae', 'mae', custom_loss_3_gamma,custom_loss_3_gamma],
+          self.cycleGAN_Model.compile(loss=['mse', 'mse', 'mae', 'mae','mae', 'mae', custom_loss_7_eta,custom_loss_7_eta],
                                      loss_weights=[1, 1, self.lambda_cycle, self.lambda_cycle, self.lambda_id, self.lambda_id,10,10], 
                                      optimizer=self.Gen_optimizer)
           self.cycleGAN_Model._name='CycleGAN'
@@ -339,9 +396,9 @@ class CycleGAN():
               
           self.trainCT_path = os.path.join(self.DataPath, 'trainCT')
           self.trainCB_path = os.path.join(self.DataPath, 'trainCB')
-          testCT_path = os.path.join(self.DataPath, 'validCT')
-          testCB_path = os.path.join(self.DataPath, 'validCB')
-          # self.data_generator=loadprintoutgen(trainCT_path,trainCB_path,self.batch_size,self.newshape,self.batch_set_size)
+          self.testCT_path = os.path.join(self.DataPath, 'validCT')
+          self.testCB_path = os.path.join(self.DataPath, 'validCB')
+          # self.data_generator=loadprintoutgen(self.trainCT_path,self.trainCB_path,self.batch_size,self.newshape,self.batch_set_size)
           
           # for images in self.data_generator:
           #     batch_CT = images[0]
@@ -357,6 +414,7 @@ class CycleGAN():
         return learning_rates
           
     def traincgan(self):
+            # epochi=
         os.chdir(self.WeightSavePathNew)
          # self.folderlen='run'+str(len(next(os.walk(self.WeightSavePath))[1]))         
         newdir='weights'        
@@ -372,9 +430,27 @@ class CycleGAN():
         # G_losses = np.zeros((self.batch_set_size,7,self.epochs))
         D_losses = []
         G_losses = []
-        
+        # D_losses_T = []
+        # G_losses_T = []
+        epoch_start=0
         #Learning rate schedule
-        learning_rates=self.learningrate_log_scheduler()
+        # learning_rates=self.learningrate_log_scheduler()
+        if self.breakflag:
+            lastweightpath=self.lastweightpath
+            lst=os.listdir(lastweightpath)
+            weightfilename=lst[-1]
+            x=weightfilename.split(".")
+            x=x[0].split("-")
+            epochi=int(x[-1])
+            gen1fname1_break="GenCT2CBWeights"+'-'+str(epochi)+'.h5'
+            gen2fname1_break="GenCB2CTWeights"+'-'+str(epochi)+'.h5'
+            disc1fname1_break="DiscCTWeights"+'-'+str(epochi)+'.h5'
+            disc2fname1_break="DiscCBWeights"+'-'+str(epochi)+'.h5'
+            self.GenCT2CB.load_weights(os.path.join(lastweightpath,gen1fname1_break))
+            self.GenCB2CT.load_weights(os.path.join(lastweightpath,gen2fname1_break))
+            self.DiscCT.load_weights(os.path.join(lastweightpath,disc1fname1_break))
+            self.DiscCB.load_weights(os.path.join(lastweightpath,disc2fname1_break))
+            epoch_start=epochi
         
         def run_training_iteration(loop_index, epoch_iterations):
               valid = tf.ones((self.labelshape))
@@ -411,26 +487,81 @@ class CycleGAN():
                                                         batch_CT, batch_CB])
               
               return g_loss, d_loss.numpy()
+          
+        def run_test_iteration(loop_index, epoch_iterations):
+              valid = tf.ones((self.labelshape))
+              fake = tf.zeros((self.labelshape))
+                 # ----------------------
+                 #  Train Discriminators
+                 # ----------------------
+
+                 # Translate images to opposite domain
+              fake_CB = self.GenCT2CB.predict(batch_CT)
+              fake_CT = self.GenCB2CT.predict(batch_CB)
+
+                 # Train the discriminators (original images = real / translated = Fake)
+              dCT_loss_real = self.DiscCT.test_on_batch(batch_CT, valid)
+              dCT_loss_fake = self.DiscCT.test_on_batch(fake_CT, fake)
+              dCT_loss = 0.5 * tf.math.add(dCT_loss_real, dCT_loss_fake)
+
+              dCB_loss_real = self.DiscCB.test_on_batch(batch_CB, valid)
+              dCB_loss_fake = self.DiscCB.test_on_batch(fake_CB, fake)
+              dCB_loss = 0.5 * tf.math.add(dCB_loss_real, dCB_loss_fake)
+
+                 # Total discriminator loss
+              d_loss = 0.5 * tf.math.add(dCT_loss, dCB_loss)
+
+                 # ------------------
+                 #  Train Generators
+                 # ------------------
+
+                 # Train the generators
+              g_loss = self.cycleGAN_Model.test_on_batch([batch_CT, batch_CB],
+                                                       [valid, valid,
+                                                        batch_CT, batch_CB,
+                                                        batch_CT, batch_CB,
+                                                        batch_CT, batch_CB])
               
-        for epochi in range(self.epochs):
+              return g_loss, d_loss.numpy()
+              
+        for epochi in range(epoch_start,self.epochs):
+                # if self.breakflag:
+                #     lastweightpath=self.lastweightpath
+                #     lst=os.listdir(lastweightpath)
+                #     weightfilename=lst[-1]
+                #     x=weightfilename.split(".")
+                #     x=x[0].split("-")
+                #     epochi=int(x[-1])
+                #     gen1fname1_break="GenCT2CBWeights"+'-'+str(epochi)+'.h5'
+                #     gen2fname1_break="GenCB2CTWeights"+'-'+str(epochi)+'.h5'
+                #     disc1fname1_break="DiscCTWeights"+'-'+str(epochi)+'.h5'
+                #     disc2fname1_break="DiscCBWeights"+'-'+str(epochi)+'.h5'
+                #     self.GenCT2CB.load_weights(os.path.join(lastweightpath,gen1fname1_break))
+                #     self.GenCB2CT.load_weights(os.path.join(lastweightpath,gen2fname1_break))
+                #     self.DiscCT.load_weights(os.path.join(lastweightpath,disc1fname1_break))
+                #     self.DiscCB.load_weights(os.path.join(lastweightpath,disc2fname1_break))
             # if self.use_data_generator:
                 loop_index = 1
-                K.set_value(self.Gen_optimizer.learning_rate, learning_rates[epochi])
-                K.set_value(self.Disc_optimizer.learning_rate, learning_rates[epochi])
+                # K.set_value(self.Gen_optimizer.learning_rate, learning_rates[epochi])
+                # K.set_value(self.Disc_optimizer.learning_rate, learning_rates[epochi])
                 self.data_generator=loadprintoutgen(self.trainCT_path,self.trainCB_path,self.batch_size,self.newshape,self.batch_set_size)
                 print(self.data_generator.__len__())
+                # self.data_generator_test=loadprintoutgen(self.testCT_path,self.testCB_path,self.batch_size,self.newshape,self.batch_set_size)
+                # print(self.data_generator_test.__len__())
+                # os.system("nvidia-smi")
                 for images in self.data_generator:
                     batch_CT = images[0]
                     batch_CB = images[1]
                     # Run all training steps
                     g_loss, d_loss=run_training_iteration(loop_index, self.data_generator.__len__())
+                    # g_loss_t, d_loss_t=run_test_iteration(loop_index, self.data_generator.__len__())
                     
                     if loop_index >= self.data_generator.__len__():
                         break
                     loop_index += 1
-                    # os.system("nvidia-smi")
                     
-                if epochi % 1 == 0 and self.saveweightflag==True: # Weights saved based on epoch intervals
+                    
+                if epochi % self.save_epoch_frequency == 0 and self.saveweightflag==True: # Weights saved based on epoch intervals
                     gen1fname1=gen1fname+'-'+str(epochi)+'.h5'    
                     gen2fname1=gen2fname+'-'+str(epochi)+'.h5'
                     disc1fname1=disc1fname+'-'+str(epochi)+'.h5'
@@ -442,12 +573,13 @@ class CycleGAN():
         
                 D_losses.append(d_loss)
                 G_losses.append(g_loss)
-                
-                print('Epoch = %s'%epochi)
+                # D_losses_T.append(d_loss_t)
+                # G_losses_T.append(g_loss_t)
                 
         # os.system("nvidia-smi")
-
+                print('Epoch=%s'%epochi)
         
+        # return D_losses,G_losses,D_losses_T,G_losses_T
         return D_losses,G_losses
         
         
@@ -459,9 +591,14 @@ class CycleGAN():
 # mypath='/home/arun/Documents/PyWSPrecision/datasets/printoutslices'
 mypath='/home/s1785969/RDS/PyWS/printout2d_data'
 weightoutputpath1='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/'
-weightoutputpath=os.path.join(weightoutputpath1,'Gamma_Output')
+weightoutputpath=os.path.join(weightoutputpath1,'Eta_Output')
 if not os.path.isdir(weightoutputpath):
     os.mkdir(weightoutputpath)
+
+lastweightpath='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Gamma_Output/run0/weights'
+
+        
+
 # imgshape=(512,512)
 
 # inputfile = ''
@@ -485,7 +622,7 @@ if not os.path.isdir(weightoutputpath):
 
 # batch_size=1
 # epochs=1
-cGAN=CycleGAN(mypath,weightoutputpath,epochs=1,batch_size=2,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=False)
+cGAN=CycleGAN(mypath,weightoutputpath,lastweightpath,epochs=500,save_epoch_frequency=50,batch_size=3,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=True,breakflag=False)
 # def run_tf(cGAN):
 #     D_losses,G_losses=cGAN.traincgan()
 #     Loss={D_losses,G_losses}
@@ -496,11 +633,12 @@ cGAN=CycleGAN(mypath,weightoutputpath,epochs=1,batch_size=2,imgshape=(256,256,1)
 # p.join()
 # Losses=p.value
 
+# D_losses,G_losses,D_losses_T,G_losses_T=cGAN.traincgan()
 D_losses,G_losses=cGAN.traincgan()
-lr=cGAN.learningrate_log_scheduler()
+# lr=cGAN.learningrate_log_scheduler()
 #%%
 from scipy.io import savemat
-mdic = {"D_losses":D_losses,"G_losses":G_losses,"lr":lr}
+mdic = {"D_losses":D_losses,"G_losses":G_losses}
 savemat("Losses.mat",mdic)
 
 #%%

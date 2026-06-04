@@ -81,25 +81,6 @@ def custom_loss_3_gamma(y_true, y_pred):# MS-SSIM
     # ssimscore=ssTF.tfmssim_custom(y_true, y_pred, max_val,_MSSSIM_WEIGHTS,filter_size,filter_sigma)
     loss=1-ssimscore
     return loss
-def custom_loss_4_delta(y_true, y_pred):# 4-SSIM
-    max_val1=tf.math.reduce_max(y_true)-tf.math.reduce_min(y_true)
-    max_val2=tf.math.reduce_max(y_pred)-tf.math.reduce_min(y_pred)
-    max_val =0.5*(max_val1+max_val2)
-    filter_size=11
-    filter_sigma=0.5
-    batchsize=K.int_shape(y_pred)
-    ssimscores=[]
-    for batchelei in range(batchsize[0]):
-        y_pred1=y_pred[batchelei,:,:,:]
-        y_true1=y_true[batchelei,:,:,:]
-        y_pred1=tf.expand_dims(y_pred1, axis=0)
-        y_true1=tf.expand_dims(y_true1, axis=0)
-        ssimscoreele,_=ssTF.tfssim4c(y_true1, y_pred1, max_val,filter_size,filter_sigma)
-        ssimscores.append(ssimscoreele)
-    ssimscore=tf.reduce_mean(ssimscores)
-    # ssimscore,_=ssTF.tfssim4c(y_true, y_pred, max_val,filter_size,filter_sigma)
-    loss=1-ssimscore
-    return loss
 #%% Data loader for volume prediction
 def dataload(DataPath):
     # mypath=self.DataPath
@@ -428,7 +409,7 @@ class CycleGAN():
         # Combined model trains generators to fool discriminators
           self.cycleGAN_Model = keras.Model(inputs=[img_CT, img_CB], outputs=[valid_CT, valid_CB, reconstr_CT, reconstr_CB, img_CT_id, img_CB_id,reconstr_CT, reconstr_CB])
           self.cycleGAN_Model.trainable=False
-          self.cycleGAN_Model.compile(loss=['mse', 'mse', 'mae', 'mae','mae', 'mae', custom_loss_4_delta,custom_loss_4_delta],
+          self.cycleGAN_Model.compile(loss=['mse', 'mse', 'mae', 'mae','mae', 'mae', custom_loss_3_gamma,custom_loss_3_gamma],
                                      loss_weights=[1, 1, self.lambda_cycle, self.lambda_cycle, self.lambda_id, self.lambda_id,1,1], 
                                      optimizer=self.Gen_optimizer)
           self.cycleGAN_Model._name='CycleGAN'
@@ -599,10 +580,10 @@ class CycleGAN():
 #%%
 
 # mypath='/home/arun/Documents/PyWSPrecision/datasets/printoutslices'
-datapath='/home/arun/Documents/MATLAB/ImageDB/PrintoutDB/DB33/'
-mypath='/home/arun/Documents/PyWSPrecision/datasets/printout2d_data'
+datapath='/home/s1785969/RDS/MATLAB/ImageDB/PrintoutDB/DB33/'
 # data same as printout2d folder-slices were not normalised but normalised during pre-processing training and prediction
-weightoutputpath1='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Gamma_Output'
+mypath='/home/s1785969/RDS/PyWS/printout2d_data'
+weightoutputpath1='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Epsilon_Output/'
 weightoutputpath=os.path.join(weightoutputpath1, 'predicted_volume')
 if not os.path.isdir(weightoutputpath):
     os.mkdir(weightoutputpath)
@@ -661,7 +642,7 @@ batch_CB = tf.expand_dims(batch_CB, -1)
 #     batch_CB = images[1]
 # #%%
 #Edit after training
-saved_weigth_path='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Beta_Output/run3/weights/'
+saved_weigth_path='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Epsilon_Output/run0/weights/'
 TestGenCT2CB_path=os.path.join(saved_weigth_path,'GenCT2CBWeights-500.h5')#Edit after training
 TestGenCT2CB=cGAN.build_generator()
 TestGenCT2CB.trainable=False
@@ -689,7 +670,7 @@ batch_CB=np.squeeze(batch_CB,axis=-1)
 
 #%%
 from scipy.io import savemat
-mdic = {"batch_CB_P":batch_CB_P,"batch_CB":batch_CB,"batch_CT_P":batch_CB_P,"batch_CT":batch_CB}
+mdic = {"batch_CB_P":batch_CB_P,"batch_CB":batch_CB,"batch_CT_P":batch_CT_P,"batch_CT":batch_CT}
 savemat("Pred_volumes.mat",mdic)
 #%%
 from matplotlib import pyplot as plt

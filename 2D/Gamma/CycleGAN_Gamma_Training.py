@@ -567,7 +567,7 @@ lastweightpath='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthes
 
 # batch_size=1
 # epochs=1
-cGAN=CycleGAN(mypath,weightoutputpath,lastweightpath,epochs=76,save_epoch_frequency=50,batch_size=3,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=True,breakflag=True)
+cGAN=CycleGAN(mypath,weightoutputpath,lastweightpath,epochs=500,save_epoch_frequency=50,batch_size=3,imgshape=(256,256,1),newshape=(256,256),batch_set_size=100,saveweightflag=True,breakflag=False)
 # def run_tf(cGAN):
 #     D_losses,G_losses=cGAN.traincgan()
 #     Loss={D_losses,G_losses}

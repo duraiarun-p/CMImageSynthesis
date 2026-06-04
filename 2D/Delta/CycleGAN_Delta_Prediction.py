@@ -598,11 +598,10 @@ class CycleGAN():
 
 #%%
 
-# mypath='/home/arun/Documents/PyWSPrecision/datasets/printoutslices'
-datapath='/home/arun/Documents/MATLAB/ImageDB/PrintoutDB/DB33/'
-mypath='/home/arun/Documents/PyWSPrecision/datasets/printout2d_data'
+datapath='/home/s1785969/RDS/MATLAB/ImageDB/PrintoutDB/DB33/'
 # data same as printout2d folder-slices were not normalised but normalised during pre-processing training and prediction
-weightoutputpath1='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Gamma_Output'
+mypath='/home/s1785969/RDS/PyWS/printout2d_data'
+weightoutputpath1='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Delta_Output/'
 weightoutputpath=os.path.join(weightoutputpath1, 'predicted_volume')
 if not os.path.isdir(weightoutputpath):
     os.mkdir(weightoutputpath)
@@ -661,7 +660,7 @@ batch_CB = tf.expand_dims(batch_CB, -1)
 #     batch_CB = images[1]
 # #%%
 #Edit after training
-saved_weigth_path='/home/arun/Documents/PyWSPrecision/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Beta_Output/run3/weights/'
+saved_weigth_path='/home/s1785969/RDS/PyWS/Pyoutputs/cycleganweights/CMImageSynthesis_Outputs/Delta_Output/run0/weights/'
 TestGenCT2CB_path=os.path.join(saved_weigth_path,'GenCT2CBWeights-500.h5')#Edit after training
 TestGenCT2CB=cGAN.build_generator()
 TestGenCT2CB.trainable=False
@@ -689,7 +688,7 @@ batch_CB=np.squeeze(batch_CB,axis=-1)
 
 #%%
 from scipy.io import savemat
-mdic = {"batch_CB_P":batch_CB_P,"batch_CB":batch_CB,"batch_CT_P":batch_CB_P,"batch_CT":batch_CB}
+mdic = {"batch_CB_P":batch_CB_P,"batch_CB":batch_CB,"batch_CT_P":batch_CT_P,"batch_CT":batch_CT}
 savemat("Pred_volumes.mat",mdic)
 #%%
 from matplotlib import pyplot as plt

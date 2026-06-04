@@ -492,8 +492,8 @@ def _ssim_per_channel_4_c_gm(img1,
 def tfssim4cg(img1,
          img2,
          max_val,
-         filter_size,
-         filter_sigma,
+         filter_size=11,
+         filter_sigma=1.5,
          k1=0.01,
          k2=0.03):
 
@@ -523,8 +523,8 @@ def tfmssim_custom(img1,
                     img2,
                     max_val,
                     power_factors=_MSSSIM_WEIGHTS,
-                    filter_size,
-                    filter_sigma,
+                    filter_size=11,
+                    filter_sigma=1.5,
                     k1=0.01,
                     k2=0.03):
   with ops.name_scope(None, 'MS-SSIM', [img1, img2]):
